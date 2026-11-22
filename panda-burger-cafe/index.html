@@ -418,6 +418,42 @@
       localStorage.setItem("pb_menu", JSON.stringify(menuItems));
       localStorage.setItem("pb_menu_ver", MENU_SCHEMA_VERSION);
     }
+const FIREBASE_DB_URL = "https://panda-burger-cafe-default-rtdb.firebaseio.com";
+
+async function saveMenuToFirebase(items) {
+  try {
+    await fetch(${FIREBASE_DB_URL}/menu.json, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(items)
+    });
+  } catch (err) {
+    console.error("Firebase saqlash xatosi:", err);
+  }
+}
+
+async function syncMenuFromFirebase() {
+  try {
+    const res = await fetch(${FIREBASE_DB_URL}/menu.json);
+    if (!res.ok) return;
+    const data = await res.json();
+
+    if (Array.isArray(data) && data.length > 0) {
+      menuItems = data;
+      localStorage.setItem("pb_menu", JSON.stringify(menuItems));
+      if (typeof renderCategories === "function") renderCategories();
+      if (typeof renderMenu === "function") renderMenu();
+    } else if (data === null && Array.isArray(menuItems) && menuItems.length > 0) {
+      await saveMenuToFirebase(menuItems);
+    }
+  } catch (err) {
+    console.error("Firebase yuklash xatosi:", err);
+  }
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  syncMenuFromFirebase();
+});
 
     let cart = safeParse("pb_cart", {});
     if (typeof cart !== "object" || Array.isArray(cart)) cart = {};
@@ -446,6 +482,7 @@
 
     function saveMenuToStorage() {
       localStorage.setItem("pb_menu", JSON.stringify(menuItems));
+    saveMenuToFirebase(menuItems);
     }
     function saveCartToStorage() {
       localStorage.setItem("pb_cart", JSON.stringify(cart));
